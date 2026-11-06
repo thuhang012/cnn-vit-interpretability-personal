@@ -9,29 +9,39 @@ Repo cá nhân public: https://github.com/thuhang012/cnn-vit-interpretability-pe
 
 ## Lần đầu trên Colab
 
-1. Đặt ZIP dataset sẵn có `cnn-vit-interpretability.zip` ở ngay MyDrive.
-   ZIP cần chứa đủ 14 file dưới `cnn-vit-interpretability/data/imagenet/data/`
-   (hoặc `data/imagenet/data/`). Chỉ cần upload một lần, không cần đóng ZIP lại
-   mỗi khi sửa code. Code trong ZIP không được dùng nữa.
+1. Dùng input đã có tại `MyDrive/cv_2026/data_10k.zip`.
+   ZIP chứa thư mục `data_10k/` với 14 file `validation-*.parquet`,
+   `analysis_10000_seed42.csv`, `subset_info.json` và `README.md`.
+   Không cần upload lại dataset mỗi lần sửa code.
 2. Mở một trong hai notebook:
    - [Attention](https://colab.research.google.com/github/thuhang012/cnn-vit-interpretability-personal/blob/feat/gradcam/notebooks/03_attention.ipynb)
    - [Grad-CAM](https://colab.research.google.com/github/thuhang012/cnn-vit-interpretability-personal/blob/feat/gradcam/notebooks/02_gradcam.ipynb)
 3. Runtime → Change runtime type → GPU (ví dụ T4 nếu có).
 4. Chạy cell setup đầu tiên, cấp quyền mount Drive khi Colab hỏi.
-   Cell tự clone code, giải nén riêng 14 shard ra ổ Colab để đọc nhanh,
+   Cell tự clone code, giải nén 14 shard và metadata ra ổ Colab để đọc nhanh,
+   đối chiếu manifest cùng ID/nhãn trong Parquet với 10.000 ảnh của repo,
    cài requirements một lần mỗi runtime/nội dung requirements, và đặt cache weights
    trên Drive. Lần đầu cần thời gian giải nén, cài thư viện và tải weights.
 5. Chạy các cell cấu hình, chọn ảnh, experiment và analysis theo thứ tự.
    Giữ mặc định smoke test nhỏ trước khi chạy cohort lớn. Trên Colab,
    `ALLOW_DOWNLOAD` mặc định bật để tải pretrained weights khi cache chưa có.
 
-Nếu không dùng ZIP, đặt đủ 14 shard vào
-`MyDrive/cnn-vit-data/imagenet/data/` và bỏ/đổi tên ZIP mặc định, hoặc đặt rõ
-`DATA_DIR` trong cell setup. Đường dẫn chỉ định rõ được ưu tiên hơn ZIP.
+Nếu không dùng ZIP, đặt rõ `DATA_DIR` trong cell setup, trỏ tới thư mục chứa
+đủ 14 shard Parquet. Đường dẫn chỉ định rõ được ưu tiên hơn ZIP.
 Đọc trực tiếp từ Drive có thể chậm hơn giải nén ZIP ra ổ Colab.
 
-Kết quả/checkpoint mặc định: `MyDrive/cnn-vit-interpretability-results/`.
-Weights: `MyDrive/torch-cache/`. Không cần tải các thư mục này về GitHub.
+Mọi output/checkpoint nằm dưới `MyDrive/cv_2026/`:
+
+```text
+cv_2026/
+  data_10k.zip                              # Input giữ nguyên
+  metrics/experiments/<experiment>/<run>/   # Metrics và checkpoint
+  figures/experiments/<experiment>/<run>/   # Hình
+  torch-cache/                             # Cache pretrained weights
+```
+
+Không cần tải cache weights hoặc input về GitHub. Dataset giải nén nằm ở ổ tạm
+`/content/imagenet-cache/`; setup tự chuẩn bị lại khi Colab cấp runtime mới.
 
 ## Mỗi vòng thử nghiệm
 
@@ -81,8 +91,23 @@ Giữ cùng đường dẫn kết quả và cấu hình để dùng cơ chế re
 Sau khi đổi phương pháp hoặc tham số ảnh hưởng kết quả, kiểm tra run ID/cấu hình
 được notebook tạo; không coi checkpoint từ phương pháp cũ là kết quả mới.
 Xem hình/bảng trong Colab; file xuất và checkpoint được giữ trên Drive.
-Nếu muốn xem kết quả trên máy, tải thư mục run cần thiết từ Drive về, hoặc dùng
-Google Drive for desktop nếu đã có. Git pull không tải kết quả bị ignore.
+Để phân tích trên laptop sau mỗi lượt, tải hai thư mục `final/` của run cần xem:
+
+| Từ Drive | Lưu trên laptop, tính từ thư mục repo |
+| --- | --- |
+| `cv_2026/metrics/experiments/<experiment>/<run>/final/` | `results/metrics/experiments/<experiment>/<run>/final/` |
+| `cv_2026/figures/experiments/<experiment>/<run>/final/` | `results/figures/experiments/<experiment>/<run>/final/` |
+
+`<experiment>` là `attention` hoặc `gradcam`; `<run>` xem biến `RUN_TAG` và
+đường dẫn được notebook in ra. Nếu cần phân tích lại từ heatmap/checkpoint,
+tải toàn bộ thư mục run ở nhánh `metrics/`, giữ nguyên cấu trúc. Không cần
+tải `data_10k.zip` hoặc `torch-cache/`. Khi lượt chạy lỗi chưa export final,
+gửi traceback và file `config.json` của checkpoint trước.
+
+Git pull không tải output từ Drive. Kết nối Google Drive cho trợ lý, hoặc tải
+thủ công các thư mục trên. Sau khi file có trên laptop, trợ lý đọc và phân tích
+trực tiếp. Các file trong `final/` có thể được Git track theo `.gitignore` hiện
+tại, nên kiểm tra trước lần sync kế tiếp nếu chưa muốn công khai kết quả.
 
 ## Chia sẻ với nhóm khi hài lòng
 
