@@ -18,10 +18,12 @@ Repo cá nhân public: https://github.com/thuhang012/cnn-vit-interpretability-pe
    - [Grad-CAM](https://colab.research.google.com/github/thuhang012/cnn-vit-interpretability-personal/blob/feat/gradcam/notebooks/02_gradcam.ipynb)
 3. Runtime → Change runtime type → GPU (ví dụ T4 nếu có).
 4. Chạy cell setup đầu tiên, cấp quyền mount Drive khi Colab hỏi.
-   Cell tự clone code, giải nén 14 shard và metadata ra ổ Colab để đọc nhanh,
+   Cell tự clone code, chép ZIP về ổ Colab rồi giải nén 14 shard và metadata,
    đối chiếu manifest cùng ID/nhãn trong Parquet với 10.000 ảnh của repo,
    cài requirements một lần mỗi runtime/nội dung requirements, và đặt cache weights
    trên Drive. Lần đầu cần thời gian giải nén, cài thư viện và tải weights.
+   Nếu Drive mất kết nối khi đọc ZIP, setup thử remount và chép lại tối đa hai lần.
+   File ZIP chép dở không được dùng để giải nén; dữ liệu đã giải nén đủ sẽ được dùng lại.
 5. Chạy các cell cấu hình, chọn ảnh, experiment và analysis theo thứ tự.
    Giữ mặc định smoke test nhỏ trước khi chạy cohort lớn. Trên Colab,
    `ALLOW_DOWNLOAD` mặc định bật để tải pretrained weights khi cache chưa có.
