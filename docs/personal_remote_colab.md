@@ -71,8 +71,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sync.ps1
 ```
 
 **Trên Colab:** dừng experiment đang chạy → chạy lại cell setup đầu tiên để pull
-→ chạy lại cell cấu hình và các cell experiment/analysis cần thiết. Module Python
-được autoreload trước các cell tiếp theo. Không cần clone lại, upload code hoặc
+→ chạy lại cell cấu hình và các cell experiment/analysis cần thiết. Khi extension
+autoreload tương thích với runtime, module Python được nạp lại trước cell tiếp theo.
+Nếu setup báo `Optional autoreload is unavailable`, setup vẫn hoàn tất; sau mỗi
+lần pull code Python mới, restart Python session rồi chạy lại các cell để dùng
+code mới. Không cần clone lại, upload code hoặc
 nhập token. Đừng chạy lại notebook cũ trong lúc experiment cũ vẫn đang thực thi.
 
 Nếu sửa cấu trúc model/class, thay dependencies hoặc thấy object cũ còn được dùng,
