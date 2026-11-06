@@ -1,17 +1,9 @@
-"""Grad-CAM, ViT attention, crop alignment and spatial metrics for notebook 02.
-
-PyTorch is imported only by extraction/preprocessing functions. The numerical
-metrics and geometry checks can run with NumPy/Pandas alone.
-"""
-
-from contextlib import contextmanager
-import math
+"""Heatmap extraction and crop geometry; model/data loading stays in src."""
 
 import numpy as np
-import pandas as pd
 
 STAGES = ("early", "middle", "late", "near_head")
-BLOCKS = (2, 5, 8, 11)  # zero-based; displayed as blocks 3, 6, 9, 12
+BLOCKS = (2, 5, 8, 11)
 
 
 def cam_layers(model, name, layerwise=False):
@@ -70,67 +62,9 @@ def gradcam(model, inputs, labels, name, layerwise=False):
             handle.remove()
 
 
-@contextmanager
-def _attention_capture(model, rollout):
-    """Scoped MHA hooks; retain selected CLS maps and only one rollout matrix."""
-    import torch
-    handles, state = [], {"maps": {}, "shapes": {}, "row_sum_error": 0.}
-    grid = model.image_size // model.patch_size
-    tokens = grid * grid + 1
-
-    def request(module, args, kwargs):
-        return args, {**kwargs, "need_weights": True, "average_attn_weights": False}
-
-    def collect(module, args, output, index):
-        weights = output[1].detach()
-        if tuple(weights.shape[1:]) != (12, tokens, tokens):
-            raise ValueError(f"Unexpected attention shape: {tuple(weights.shape)}")
-        if not weights.isfinite().all() or (weights < 0).any():
-            raise ValueError("Nonfinite/negative attention")
-        error = (weights.sum(-1) - 1).abs().max().item()
-        if error > 1e-4:
-            raise ValueError("Attention rows do not sum to one")
-        state["row_sum_error"] = max(state["row_sum_error"], error)
-        mean = weights.mean(1)
-        if index in BLOCKS:
-            key = f"block_{index + 1}"
-            state["maps"][key] = mean[:, 0, 1:].reshape(-1, grid, grid).cpu().numpy()
-            state["shapes"][key] = list(weights.shape)
-        if rollout:
-            matrix = mean + torch.eye(tokens, device=mean.device)[None]
-            matrix = matrix / matrix.sum(-1, keepdim=True)
-            state["joint"] = matrix if index == 0 else matrix @ state["joint"]
-
-    try:
-        for index, block in enumerate(model.encoder.layers):
-            if rollout or index in BLOCKS:
-                handles.append(block.self_attention.register_forward_pre_hook(request, with_kwargs=True))
-                handles.append(block.self_attention.register_forward_hook(
-                    lambda m, a, o, i=index: collect(m, a, o, i)))
-        yield state
-    finally:
-        for handle in handles:
-            handle.remove()
-
-
-def attention(model, inputs, rollout=False):
-    import torch
-    if model.training:
-        raise ValueError("Attention extraction requires model.eval()")
-    with _attention_capture(model, rollout) as state, torch.no_grad():
-        logits = model(inputs).cpu()
-    if not logits.isfinite().all():
-        raise ValueError("Nonfinite logits")
-    if rollout:
-        grid = model.image_size // model.patch_size
-        state["maps"]["rollout"] = state.pop("joint")[:, 0, 1:].reshape(-1, grid, grid).cpu().numpy()
-    return {**state, "logits": logits}
-
-
-def preprocess(image, weights):
+def preprocess(image, transform):
     """Official tensor plus exact resize/crop geometry in original edge coordinates."""
     from torchvision.transforms import functional as TF
-    transform = weights.transforms()
     resized = TF.resize(image, transform.resize_size, interpolation=transform.interpolation,
                         antialias=transform.antialias)
     rw, rh = resized.size
@@ -197,24 +131,3 @@ def map_status(cam):
     if values.max() == 0:
         return "all_zero"
     return "near_constant" if np.ptp(values / values.max()) <= 1e-6 else "ok"
-
-
-def entropy(cam):
-    if map_status(cam) not in ("ok", "near_constant") or np.size(cam) <= 1:
-        return float("nan")
-    p = np.asarray(cam, dtype=float).ravel() / np.max(cam)
-    p /= p.sum()
-    p = p[p > 0]
-    return float(-(p * np.log(p)).sum() / math.log(np.size(cam)))
-
-
-def agreement(first, second):
-    a, b = np.asarray(first, dtype=float), np.asarray(second, dtype=float)
-    if a.shape != b.shape:
-        raise ValueError("Maps must share the same grid")
-    if map_status(a) != "ok" or map_status(b) != "ok":
-        return {"spearman": float("nan"), "top20_iou": float("nan")}
-    ra, rb = (pd.Series(v.ravel()).rank(method="average") for v in (a, b))
-    count = math.ceil(.2 * a.size)
-    ia, ib = (set(np.argsort(-v.ravel(), kind="stable")[:count]) for v in (a, b))
-    return {"spearman": float(np.corrcoef(ra, rb)[0, 1]), "top20_iou": len(ia & ib) / len(ia | ib)}
