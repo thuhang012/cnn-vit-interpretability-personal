@@ -168,6 +168,6 @@ Hai kết quả không đối lập: CLS có thể tập trung hơn trong khi c�
 
 **E1:** hai model có spatial attribution khác nhau; trong top-20% CAM, ResNet có xu hướng tạo vùng liền mạch hơn, còn ViT có nhiều cụm rời rạc hơn. Kết quả cần được đọc cùng grid resolution, cutoff ties và coverage.
 
-**E2:** khi đi từ block 3 tới block 12, CLS attention trở nên chọn lọc hơn, trong khi patch-to-patch attention phân bổ tỷ lệ mass lớn hơn tới các patch xa. Uniform baseline giúp tránh nhầm số lượng distant destinations lớn với một cơ chế ưu tiên xa.
+**E2:** ở block 3–6, CLS token phân bổ attention gần đồng đều trên ảnh, còn các query patches dành khoảng 69% attention cho những patch gần. Đến block 12, CLS attention tập trung hơn vào một số vùng, trong khi attention từ query patches tới các patch xa tăng lên khoảng 54%. Tuy nhiên, mức 54% này gần bằng uniform baseline 53,93%, nên chưa cho thấy model ưu tiên patch xa hơn mức phân bổ đồng đều.
 
-Các giới hạn còn lại gồm: chưa có confidence intervals hoặc kiểm định paired trên per-image metrics; chưa bổ sung số cặp hợp lệ/bị loại và cutoff-tie rates của lượt E1 vào bản tổng hợp; chưa đối chiếu exported metadata của lượt Colab. Head averaging cũng có thể che khuất khác biệt giữa từng attention head. Các kết luận ở đây là mô tả trong thiết lập cố định, không phải kết luận tổng quát về mọi CNN/ViT hoặc causal explanation cho prediction.
+**Giới hạn:** chưa có confidence intervals hoặc kiểm định statistical significance. CAM và attention chỉ mô tả phân bố quan sát được, chưa chứng minh vùng ảnh nào thực sự quyết định prediction.
