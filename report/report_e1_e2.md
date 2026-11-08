@@ -16,7 +16,7 @@ Báo cáo khảo sát hai khía cạnh: sự khác biệt giữa **Grad-CAM** c�
 
 **Nguồn số liệu:** các bảng aggregate trong báo cáo lấy từ bản tổng hợp kết quả do người thực hiện cung cấp. Các biểu đồ aggregate được vẽ lại từ những giá trị này, không phải kết quả chạy lại toàn cohort trên laptop. Chưa đối chiếu đầy đủ với exported metrics, coverage và metadata của lượt chạy Colab; báo cáo không đưa ra kết luận về statistical significance.
 
-**Nguồn hình minh họa:** năm panel E2 ở mục 4 được tạo trực tiếp trên laptop từ dataset gốc và pretrained ViT-B/16 đã cache, dùng official transform và cách lấy attention của notebook 03. Đây là minh họa bổ sung trên năm ảnh, không thay thế số liệu của cohort 1.000 ảnh. Các notebook và checkpoint thí nghiệm được giữ nguyên.
+**Nguồn hình minh họa:** panel ảnh lamp trong phần E2 được tạo trực tiếp trên laptop từ dataset gốc và pretrained ViT-B/16 đã cache, dùng official transform và cách lấy attention của notebook 03. Đây là minh họa định tính bổ sung, không thay thế số liệu của cohort 1.000 ảnh. Các notebook và checkpoint thí nghiệm được giữ nguyên.
 
 ## 2. Experiment 1 — ResNet50 và ViT-B/16 phân bố Grad-CAM khác nhau như thế nào?
 
@@ -102,7 +102,7 @@ Trích xuất direct attention weights tại block 3/6/9/12 trên native grid **
 
 ![E2 RQ1: mean normalized CLS attention entropy theo transformer block](figures/e2_cls_entropy.png)
 
-*Hình 2. Entropy giảm qua các block được khảo sát. Đây là mean của cohort 1.000 ảnh theo bản tổng hợp, không phải mean của năm ảnh minh họa bên dưới; chưa có error bars hoặc confidence intervals.*
+*Hình 2. Entropy giảm qua các block được khảo sát. Đây là mean của cohort 1.000 ảnh theo bản tổng hợp; chưa có error bars hoặc confidence intervals.*
 
 Block 3 và 6 có entropy gần 1: sau khi trung bình heads, CLS attention còn phân bố tương đối đồng đều. Đến block 9, entropy giảm xuống 0,8964; tại block 12 còn 0,7222, thấp hơn block 3 khoảng **0,2672**.
 
@@ -145,6 +145,14 @@ DAM được tính cho toàn bộ 196 queries/ảnh, trung bình trong mỗi ả
 - **Block 9:** DAM tăng lên 47,71%; khoảng cách tới baseline giảm còn 6,22 pp, cho thấy attention mass tới distant patches tăng lên.
 - **Block 12:** DAM đạt 54,11%, gần uniform baseline 53,93%. Chênh lệch +0,18 pp chưa đủ để kết luận có một distant preference đáng kể; kết quả phù hợp với việc không còn thiên lệch mạnh về gần/xa ở mức tổng attention mass so với baseline này.
 
+Để đối chiếu các chỉ số với spatial attention thực tế, hình dưới sử dụng một ảnh **lampshade** (`ILSVRC2012_val_00000427_n03637318.JPEG`). Cùng hai query cố định được giữ qua bốn block, không chọn lại theo heatmap.
+
+![E2: ảnh lamp với CLS attention và hai query patches qua block 3/6/9/12](figures/e2_example_01.png)
+
+*Hình 4. Hàng đầu là CLS-to-patch attention; hai hàng dưới là query-to-other-patches tại `(6,6)` và `(3,3)`, tọa độ zero-based. Viền vàng đánh dấu query; vòng cyan có bán kính 7 patch steps, với distant destinations nằm trên/ngoài vòng. Chính query được mask, CLS bị loại khỏi patch-query distribution. Màu biểu diễn attention probability, dùng chung color scale giữa bốn block trong mỗi hàng. `H` và DAM trên hình là giá trị của riêng ảnh/query này, không phải mean toàn cohort.*
+
+Ở query `(3,3)`, DAM tăng từ khoảng 29,8% tại block 3 lên 51,6% tại block 9, rồi còn 48,7% tại block 12: có attention tới các patch xa nhưng không tăng đơn điệu trên mọi query. Hàng CLS cũng cho phép đối chiếu entropy với hình thái phân bố attention. Ví dụ này minh họa cách đọc metrics; xu hướng tổng hợp vẫn được xác định từ cohort 1.000 ảnh. ViT dự đoán **table lamp**, khác ground truth **lampshade**, nên attention có cấu trúc không đồng nghĩa prediction đúng.
+
 **Trả lời RQ2:** direct self-attention thực sự phân bổ attention tới các vị trí không liền kề. Qua các block khảo sát, phân bổ chuyển từ thiên về gần ở block 3–6 sang dành tỷ lệ lớn hơn cho các patch xa ở block 9–12. Đây là quan sát từ attention weights trên dữ liệu, không chỉ suy luận từ cấu trúc all-to-all của self-attention.
 
 ### 3.4. Kết luận E2
@@ -156,69 +164,10 @@ ViT-B/16 thay đổi theo độ sâu trên hai khía cạnh khác nhau:
 
 Hai kết quả không đối lập: CLS có thể tập trung hơn trong khi các patch tokens phân bổ attention rộng hơn, vì chúng là những query khác nhau. Không suy ra causal influence, semantic correspondence hoặc robustness chỉ từ các bản đồ attention.
 
-## 4. Minh họa E2 trên năm ảnh cố định
-
-### 4.1. Cách chọn và đọc hình
-
-Chọn ảnh trước khi quan sát heatmap: lấy `image_id` đầu tiên theo thứ tự từ điển trong mỗi baseline correctness group hiện có, rồi bổ sung ảnh đầu tiên chưa được chọn để đủ năm ảnh. Hình được sắp theo thứ tự ảnh xuất hiện khi đọc Parquet. Các nhóm là kết quả dự đoán baseline của **cả hai model**; việc tạo hình bên dưới chỉ cần ViT.
-
-Mỗi hình có ba hàng:
-
-- **Hàng 1:** official input crop và CLS-to-patch attention tại block 3/6/9/12. `H` là entropy của riêng ảnh này.
-- **Hàng 2–3:** query-to-other-patches tại query `(6,6)` và `(3,3)`, tọa độ zero-based. Viền vàng đánh dấu query; vòng cyan bán kính 7 patch steps phân chia near/distant; chính query được mask.
-- Màu thể hiện attention probability trên destination patches. Các block **trong cùng hàng** dùng chung color scale; không dùng màu ở hai hàng/hai ảnh khác nhau để so trực tiếp magnitude. DAM trong tiêu đề là của riêng query; nó không phải DAM trung bình toàn cohort.
-
-### 4.2. Ảnh 1 — Lampshade, nhóm `both_wrong`
-
-`ILSVRC2012_val_00000427_n03637318.JPEG` — ground truth: **lampshade**; ViT prediction: **table lamp**.
-
-![E2 ảnh lampshade: CLS attention và hai query patches qua bốn blocks](figures/e2_example_01.png)
-
-*Hình 4. Minh họa một trường hợp prediction không đúng ground truth. Heatmap có cấu trúc không đồng nghĩa model đã phân loại đúng; DAM đo spatial allocation, không đo correctness.*
-
-### 4.3. Ảnh 2 — Sports car, nhóm `vit_only`
-
-`ILSVRC2012_val_00001247_n04285008.JPEG` — ground truth và ViT prediction: **sports car**.
-
-![E2 ảnh sports car: CLS attention và hai query patches qua bốn blocks](figures/e2_example_02.png)
-
-*Hình 5. Cùng vị trí query được giữ qua bốn block để so sánh thay đổi spatial allocation. Các vùng sáng bên ngoài vòng cyan là attention tới distant patches theo định nghĩa của thí nghiệm.*
-
-### 4.4. Ảnh 3 — Guillotine, nhóm `both_correct`
-
-`ILSVRC2012_val_00000169_n03467068.JPEG` — ground truth và ViT prediction: **guillotine**.
-
-![E2 ảnh guillotine: CLS attention và hai query patches qua bốn blocks](figures/e2_example_03.png)
-
-*Hình 6. Đối chiếu CLS-to-patch và patch-to-patch trên cùng input crop. Một CLS map tập trung không có nghĩa tất cả patch-query maps cũng tập trung ở cùng vị trí.*
-
-### 4.5. Ảnh 4 — Bathtub, nhóm `resnet_only`
-
-`ILSVRC2012_val_00003072_n02808440.JPEG` — ground truth: **bathtub**; ViT prediction: **tub**.
-
-![E2 ảnh bathtub: CLS attention và hai query patches qua bốn blocks](figures/e2_example_04.png)
-
-*Hình 7. Một trường hợp ViT dự đoán khác ground truth dù nhãn dự đoán có thể gần về ngữ nghĩa. Correctness trong báo cáo vẫn theo exact ImageNet label, không tự gộp các class.*
-
-### 4.6. Ảnh 5 — Hamper, nhóm `both_correct`
-
-`ILSVRC2012_val_00000060_n03482405.JPEG` — ground truth và ViT prediction: **hamper**.
-
-![E2 ảnh hamper: CLS attention và hai query patches qua bốn blocks](figures/e2_example_05.png)
-
-*Hình 8. Ảnh bổ sung theo quy tắc ID, không được chọn vì heatmap đặc biệt. Năm ảnh chỉ hỗ trợ quan sát định tính; kết luận về xu hướng chung dựa trên số liệu cohort, không dựa riêng các ví dụ này.*
-
-## 5. Tổng kết và giới hạn
+## 4. Tổng kết và giới hạn
 
 **E1:** hai model có spatial attribution khác nhau; trong top-20% CAM, ResNet có xu hướng tạo vùng liền mạch hơn, còn ViT có nhiều cụm rời rạc hơn. Kết quả cần được đọc cùng grid resolution, cutoff ties và coverage.
 
 **E2:** khi đi từ block 3 tới block 12, CLS attention trở nên chọn lọc hơn, trong khi patch-to-patch attention phân bổ tỷ lệ mass lớn hơn tới các patch xa. Uniform baseline giúp tránh nhầm số lượng distant destinations lớn với một cơ chế ưu tiên xa.
 
 Các giới hạn còn lại gồm: chưa có confidence intervals hoặc kiểm định paired trên per-image metrics; chưa bổ sung số cặp hợp lệ/bị loại và cutoff-tie rates của lượt E1 vào bản tổng hợp; chưa đối chiếu exported metadata của lượt Colab. Head averaging cũng có thể che khuất khác biệt giữa từng attention head. Các kết luận ở đây là mô tả trong thiết lập cố định, không phải kết luận tổng quát về mọi CNN/ViT hoặc causal explanation cho prediction.
-
-## 6. Mã nguồn liên quan
-
-- [Notebook 02 — Grad-CAM và connected components](../notebooks/02_gradcam.ipynb).
-- [Notebook 03 — CLS attention và query-patch DAM](../notebooks/03_attention.ipynb).
-- [Shared experiment protocol](../docs/experiment_protocol.md).
-- [Quy trình laptop–Colab và vị trí output](../docs/personal_remote_colab.md).
